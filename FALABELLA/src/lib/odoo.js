@@ -1,4 +1,5 @@
 import axios from 'axios';
+import xmlrpc from 'xmlrpc';
 
 import { config } from '../config.js';
 import { logger } from '../logger.js';
@@ -116,7 +117,135 @@ function pickQuantity(record, includePosInfo = true) {
   return config.stock.defaultWhenMissing;
 }
 
+function hasXmlRpcCredentials() {
+  return Boolean(
+    config.stock.odoo.xmlrpcDb
+      && config.stock.odoo.xmlrpcUsername
+      && config.stock.odoo.xmlrpcApiKey
+  );
+}
+
+function createXmlRpcClient(baseUrl, endpoint) {
+  const targetUrl = new URL(endpoint, `${baseUrl.replace(/\/$/, '')}/`).toString();
+  return xmlrpc.createClient({
+    url: targetUrl,
+    headers: {
+      'User-Agent': 'shopify-falabella-sync/1.0'
+    }
+  });
+}
+
+function xmlRpcCall(client, method, params) {
+  return new Promise((resolve, reject) => {
+    client.methodCall(method, params, (error, result) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve(result);
+    });
+  });
+}
+
+async function resolveWarehouseId(modelsClient, uid) {
+  const configuredWarehouseId = Number(config.stock.odoo.warehouseId || 0);
+  if (configuredWarehouseId > 0) {
+    return configuredWarehouseId;
+  }
+
+  if (!config.stock.odoo.warehouseName) {
+    return null;
+  }
+
+  const ids = await xmlRpcCall(modelsClient, 'execute_kw', [
+    config.stock.odoo.xmlrpcDb,
+    uid,
+    config.stock.odoo.xmlrpcApiKey,
+    'stock.warehouse',
+    'search',
+    [[['name', 'ilike', config.stock.odoo.warehouseName]]],
+    { limit: 1 }
+  ]);
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return null;
+  }
+
+  return Number(ids[0]);
+}
+
+async function loadOdooStockBySkuXmlRpc() {
+  const commonClient = createXmlRpcClient(config.stock.odoo.baseUrl, '/xmlrpc/2/common');
+  const modelsClient = createXmlRpcClient(config.stock.odoo.baseUrl, '/xmlrpc/2/object');
+
+  const uid = await xmlRpcCall(commonClient, 'authenticate', [
+    config.stock.odoo.xmlrpcDb,
+    config.stock.odoo.xmlrpcUsername,
+    config.stock.odoo.xmlrpcApiKey,
+    {}
+  ]);
+
+  if (!uid) {
+    throw new Error('Odoo XML-RPC authentication failed');
+  }
+
+  const warehouseId = await resolveWarehouseId(modelsClient, uid);
+  const stockMap = new Map();
+  let offset = 0;
+  const pageSize = Math.max(1, Number(config.stock.odoo.limit || 10000));
+
+  while (true) {
+    const products = await xmlRpcCall(modelsClient, 'execute_kw', [
+      config.stock.odoo.xmlrpcDb,
+      uid,
+      config.stock.odoo.xmlrpcApiKey,
+      'product.product',
+      'search_read',
+      [[['default_code', '!=', false]]],
+      {
+        fields: ['default_code', 'qty_available'],
+        offset,
+        limit: pageSize,
+        context: warehouseId ? { warehouse: warehouseId } : {}
+      }
+    ]);
+
+    const rows = Array.isArray(products) ? products : [];
+    for (const row of rows) {
+      const sku = normalizeSku(row?.default_code);
+      if (!sku) {
+        continue;
+      }
+
+      const qty = Number(row?.qty_available);
+      const quantity = Number.isFinite(qty)
+        ? Math.max(0, toInt(qty, 0))
+        : config.stock.defaultWhenMissing;
+      stockMap.set(sku, quantity);
+    }
+
+    if (rows.length < pageSize) {
+      break;
+    }
+
+    offset += pageSize;
+  }
+
+  logger.info('Loaded stock from Odoo XML-RPC', {
+    distinctSkus: stockMap.size,
+    warehouseName: config.stock.odoo.warehouseName,
+    warehouseId: warehouseId || ''
+  });
+
+  return stockMap;
+}
+
 export async function loadOdooStockBySku() {
+  if (hasXmlRpcCredentials()) {
+    return loadOdooStockBySkuXmlRpc();
+  }
+
   const client = axios.create({
     baseURL: config.stock.odoo.baseUrl,
     timeout: config.stock.odoo.timeoutMs
@@ -128,12 +257,27 @@ export async function loadOdooStockBySku() {
     'X-API-Key': config.stock.odoo.apiToken
   };
 
-  const { data } = await client.get(config.stock.odoo.path, {
-    headers,
-    params: {
-      limit: config.stock.odoo.limit
+  let data;
+  try {
+    const response = await client.get(config.stock.odoo.path, {
+      headers,
+      params: {
+        limit: config.stock.odoo.limit
+      }
+    });
+    data = response.data;
+  } catch (error) {
+    const status = Number(error?.response?.status || 0);
+    if ((status === 404 || status === 401 || status === 403) && hasXmlRpcCredentials()) {
+      logger.warn('Odoo REST endpoint failed, falling back to XML-RPC', {
+        status,
+        path: config.stock.odoo.path
+      });
+      return loadOdooStockBySkuXmlRpc();
     }
-  });
+
+    throw error;
+  }
 
   const records = collectRecords(data);
   const stockMap = new Map();

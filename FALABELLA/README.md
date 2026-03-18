@@ -40,6 +40,11 @@ Usa `.env.example` como base. Variables principales:
 - `ODOO_POS_NAME` opcional
 - `ODOO_POS_ID` opcional
 - `ODOO_TIENDA` opcional como alias de selección
+- `ODOO_XMLRPC_DB` opcional
+- `ODOO_XMLRPC_USERNAME` opcional
+- `ODOO_XMLRPC_API_KEY` opcional
+- `ODOO_WAREHOUSE_NAME` opcional
+- `ODOO_WAREHOUSE_ID` opcional
 - `ODOO_LIMIT`
 - `ODOO_TIMEOUT_MS`
 - `STOCK_DEFAULT_WHEN_MISSING`
@@ -47,6 +52,7 @@ Usa `.env.example` como base. Variables principales:
 Se consulta con `GET /api/products?limit=<n>` usando token en header `Authorization: Bearer`.
 El sincronizador toma el SKU desde `default_code` o campos equivalentes y la cantidad desde `pos_info`.
 Si defines `ODOO_POS_NAME` o `ODOO_POS_ID`, usa sólo ese punto de venta. Si no defines ninguno, suma el stock de todos los POS del producto.
+Si defines `ODOO_XMLRPC_DB`, `ODOO_XMLRPC_USERNAME` y `ODOO_XMLRPC_API_KEY`, el sync usa XML-RPC directo de Odoo y no depende de `ODOO_STOCK_PATH`.
 
 ### Falabella
 

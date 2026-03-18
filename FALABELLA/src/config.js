@@ -80,6 +80,11 @@ export const config = {
       tienda: readOptional('ODOO_TIENDA'),
       posName: readOptional('ODOO_POS_NAME'),
       posId: readOptional('ODOO_POS_ID'),
+      xmlrpcDb: readOptional('ODOO_XMLRPC_DB'),
+      xmlrpcUsername: readOptional('ODOO_XMLRPC_USERNAME'),
+      xmlrpcApiKey: readOptional('ODOO_XMLRPC_API_KEY'),
+      warehouseName: readOptional('ODOO_WAREHOUSE_NAME'),
+      warehouseId: readOptional('ODOO_WAREHOUSE_ID'),
       limit: readNumber('ODOO_LIMIT', 10000),
       timeoutMs: readNumber('ODOO_TIMEOUT_MS', 60000)
     },

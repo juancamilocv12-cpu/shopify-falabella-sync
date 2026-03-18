@@ -44,6 +44,11 @@ jobs:
           ODOO_STOCK_PATH=/api/odoo/inventario
           ODOO_API_TOKEN=${{ secrets.ODOO_API_TOKEN }}
           ODOO_TIENDA=${{ secrets.ODOO_TIENDA }}
+          ODOO_XMLRPC_DB=${{ secrets.ODOO_XMLRPC_DB }}
+          ODOO_XMLRPC_USERNAME=${{ secrets.ODOO_XMLRPC_USERNAME }}
+          ODOO_XMLRPC_API_KEY=${{ secrets.ODOO_XMLRPC_API_KEY }}
+          ODOO_WAREHOUSE_NAME=${{ secrets.ODOO_WAREHOUSE_NAME }}
+          ODOO_WAREHOUSE_ID=${{ secrets.ODOO_WAREHOUSE_ID }}
           ODOO_LIMIT=10000
           ODOO_TIMEOUT_MS=60000
           STOCK_DEFAULT_WHEN_MISSING=0
