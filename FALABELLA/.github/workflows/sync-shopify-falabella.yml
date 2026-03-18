@@ -1,9 +1,16 @@
 name: Sync Shopify to Falabella
 
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:
   schedule:
     - cron: '*/5 * * * *'
+
+concurrency:
+  group: sync-shopify-falabella
+  cancel-in-progress: false
 
 jobs:
   sync:
