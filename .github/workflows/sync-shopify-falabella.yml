@@ -1,0 +1,92 @@
+name: Sync Shopify to Falabella
+
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+
+concurrency:
+  group: sync-shopify-falabella
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create env file
+        shell: bash
+        run: |
+          cat <<'EOF' > .env
+          SHOPIFY_STORE=${{ secrets.SHOPIFY_STORE }}
+          SHOPIFY_ACCESS_TOKEN=${{ secrets.SHOPIFY_ACCESS_TOKEN }}
+          SHOPIFY_API_VERSION=2025-01
+          SHOPIFY_LOCATION_ID=${{ secrets.SHOPIFY_LOCATION_ID }}
+          STOCK_SOURCE=odoo
+          ODOO_BASE_URL=${{ secrets.ODOO_BASE_URL }}
+          ODOO_STOCK_PATH=/api/odoo/inventario
+          ODOO_API_TOKEN=${{ secrets.ODOO_API_TOKEN }}
+          ODOO_TIENDA=${{ secrets.ODOO_TIENDA }}
+          ODOO_XMLRPC_DB=${{ secrets.ODOO_XMLRPC_DB }}
+          ODOO_XMLRPC_USERNAME=${{ secrets.ODOO_XMLRPC_USERNAME }}
+          ODOO_XMLRPC_API_KEY=${{ secrets.ODOO_XMLRPC_API_KEY }}
+          ODOO_WAREHOUSE_NAME=${{ secrets.ODOO_WAREHOUSE_NAME }}
+          ODOO_WAREHOUSE_ID=${{ secrets.ODOO_WAREHOUSE_ID }}
+          ODOO_LIMIT=10000
+          ODOO_TIMEOUT_MS=60000
+          STOCK_DEFAULT_WHEN_MISSING=0
+          SYNC_FREQUENCY_MINUTES=5
+          MAX_PRODUCTS_PER_RUN=0
+          PRICE_MARKUP_PERCENT=14
+          MIN_PRICE=0
+          FALABELLA_BASE_URL=https://sellercenter-api.falabella.com/
+          FALABELLA_USER_ID=${{ secrets.FALABELLA_USER_ID }}
+          FALABELLA_API_KEY=${{ secrets.FALABELLA_API_KEY }}
+          FALABELLA_VERSION=1.0
+          FALABELLA_FORMAT=XML
+          FALABELLA_OPERATOR_CODE=${{ secrets.FALABELLA_OPERATOR_CODE }}
+          FALABELLA_DEFAULT_CATEGORY_ID=${{ secrets.FALABELLA_DEFAULT_CATEGORY_ID }}
+          FALABELLA_DEFAULT_BRAND=${{ secrets.FALABELLA_DEFAULT_BRAND }}
+          FALABELLA_DEFAULT_STATUS=active
+          FALABELLA_DEFAULT_CONDITION_TYPE=Nuevo
+          FALABELLA_DEFAULT_PACKAGE_HEIGHT=10
+          FALABELLA_DEFAULT_PACKAGE_WIDTH=10
+          FALABELLA_DEFAULT_PACKAGE_LENGTH=10
+          FALABELLA_DEFAULT_PACKAGE_WEIGHT=1
+          FALABELLA_DEFAULT_TAX_PERCENTAGE=19
+          FALABELLA_DEFAULT_IMAGE_URL=${{ secrets.FALABELLA_DEFAULT_IMAGE_URL }}
+          FALABELLA_SKIP_IMAGE_UPLOAD=false
+          FALABELLA_FEED_POLL_ATTEMPTS=12
+          FALABELLA_FEED_POLL_INTERVAL_MS=5000
+          EOF
+
+      - name: Run one sync
+        run: npm run sync:once
+
+      - name: Commit SKU map changes
+        run: |
+          if git diff --quiet -- data/sku-map.json; then
+            exit 0
+          fi
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add data/sku-map.json
+          git commit -m "chore: update Falabella sku map"
+          git push
