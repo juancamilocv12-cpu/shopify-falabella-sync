@@ -1,0 +1,13 @@
+{
+  "*": {
+    "Product": {},
+    "ProductData": {
+      "ConditionType": "Nuevo",
+      "PackageHeight": "10",
+      "PackageWidth": "10",
+      "PackageLength": "10",
+      "PackageWeight": "1",
+      "TaxPercentage": "19"
+    }
+  }
+}

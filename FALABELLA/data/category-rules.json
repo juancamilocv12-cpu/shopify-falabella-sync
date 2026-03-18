@@ -1,0 +1,46 @@
+{
+  "exactSku": {},
+  "skuPrefix": {},
+  "titleContains": {
+    "toalla": "717",
+    "toallas": "717",
+    "frazada": "2481",
+    "frazadas": "2481",
+    "manta": "2481",
+    "mantas": "2481",
+    "sabana": "1272",
+    "sabanas": "1272",
+    "almohada": "1524",
+    "almohadas": "1524",
+    "protector de colchon": "2078",
+    "protector colchon": "2078",
+    "protector de almohada": "2078",
+    "protector almohada": "2078",
+    "protector de plumon": "2078",
+    "protector plumon": "2078",
+    "funda de almohada": "60",
+    "funda almohada": "60",
+    "funda de cojin": "60",
+    "funda cojin": "60"
+  },
+  "productTypeContains": {
+    "toalla": "717",
+    "textil": "717",
+    "frazada": "2481",
+    "manta": "2481",
+    "sabana": "1272",
+    "almohada": "1524",
+    "protector": "2078",
+    "funda": "60"
+  },
+  "vendorContains": {},
+  "tagContains": {
+    "toalla": "717",
+    "frazada": "2481",
+    "manta": "2481",
+    "sabana": "1272",
+    "almohada": "1524",
+    "protector": "2078",
+    "funda": "60"
+  }
+}

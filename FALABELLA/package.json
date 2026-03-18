@@ -1,0 +1,22 @@
+{
+  "name": "shopify-falabella-sync",
+  "version": "1.0.0",
+  "description": "Sync products, prices, and stock from Shopify/PostgreSQL to Falabella Seller Center.",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "sync:once": "node src/cli.js sync:once",
+    "sync:loop": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "axios": "^1.8.4",
+    "dotenv": "^16.4.7",
+    "fast-xml-parser": "^4.5.3",
+    "pg": "^8.14.1",
+    "xmlbuilder2": "^3.1.1"
+  }
+}
