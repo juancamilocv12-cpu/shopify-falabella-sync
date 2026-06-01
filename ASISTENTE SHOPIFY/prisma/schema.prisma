@@ -1,0 +1,94 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// DEMAND PLANNING
+// =============================================================================
+
+model DemandPlanningRecommendation {
+  id                      String   @id @default(uuid())
+  productId               String
+  variantId               String
+  sku                     String
+  productTitle            String
+  variantTitle            String
+  vendor                  String
+  collectionId            String?
+
+  // Inventario
+  currentStock            Int      @default(0)
+  availableStock          Int      @default(0)
+  incomingStock           Int      @default(0)
+  committedStock          Int      @default(0)
+
+  // Historial de ventas
+  unitsSold7Days          Int      @default(0)
+  unitsSold15Days         Int      @default(0)
+  unitsSold30Days         Int      @default(0)
+  unitsSold60Days         Int      @default(0)
+  unitsSold90Days         Int      @default(0)
+  unitsSold180Days        Int      @default(0)
+
+  // Métricas de demanda
+  dailyDemand             Float    @default(0)
+  weeklyDemand            Float    @default(0)
+  monthlyDemand           Float    @default(0)
+
+  // Parámetros de cálculo
+  targetCoverageMonths    Float    @default(2)
+  leadTimeDays            Int      @default(15)
+  leadTimeDemand          Float    @default(0)
+  safetyStock             Float    @default(0)
+  minimumRequiredStock    Int      @default(15)
+  reorderPoint            Int      @default(15)
+  targetStock             Int      @default(15)
+
+  // Cantidades de compra
+  suggestedPurchaseQuantity  Int   @default(0)
+  roundedPurchaseQuantity    Int   @default(0)
+
+  // Cobertura
+  daysOfInventory         Float    @default(0)
+  monthsOfInventory       Float    @default(0)
+
+  // Clasificación
+  stockoutRisk            String   @default("none")
+  demandTrend             String   @default("no_data")
+  recommendationType      String
+  priority                String   @default("none")
+  inventoryActionStatus   String   @default("healthy")
+
+  // Explicación y estado
+  reason                  String   @db.Text
+  status                  String   @default("pending")
+
+  // Extras
+  estimatedLostSales      Int?
+  daysSinceLastSale       Int?
+  isExcluded              Boolean  @default(false)
+  isStrategic             Boolean  @default(false)
+  isSeasonal              Boolean  @default(false)
+  supplierPackSize        Int?
+
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@index([productId])
+  @@index([variantId])
+  @@index([sku])
+  @@index([vendor])
+  @@index([status])
+  @@index([priority])
+  @@index([recommendationType])
+  @@index([stockoutRisk])
+  @@index([inventoryActionStatus])
+}

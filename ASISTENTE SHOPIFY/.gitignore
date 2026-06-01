@@ -1,0 +1,26 @@
+# Node dependencies
+node_modules/
+
+# Build outputs
+dist/
+coverage/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+.vscode/
+
+# Next.js app artifacts
+web/.next/
+web/node_modules/
+web/node_modules_old/
+web/.env.local
