@@ -127,6 +127,7 @@ export const demandPlanningData: DemandPlanningItem[] = inventoryData.map((inv, 
       suggested > 0
         ? `Se recomienda comprar ${rounded} unidades para mantener cobertura y evitar ruptura.`
         : "No se recomienda compra por cobertura suficiente o sobrestock.",
+    recommendedAt: new Date(Date.now() - i * 2 * 60 * 60 * 1000).toISOString(),
   };
 });
 
@@ -243,6 +244,8 @@ export function paginateAndFilter<T extends Record<string, unknown>>(
   const q = String(params.q ?? "").toLowerCase();
   const sortBy = String(params.sortBy ?? "");
   const sortDirection = String(params.sortDirection ?? "desc") === "asc" ? "asc" : "desc";
+  const fromDateRaw = String(params.fromDate ?? "").trim();
+  const toDateRaw = String(params.toDate ?? "").trim();
 
   let rows = source;
 
@@ -252,11 +255,54 @@ export function paginateAndFilter<T extends Record<string, unknown>>(
     );
   }
 
+  const parseDateFilter = (value: string, endOfDay: boolean): number | null => {
+    if (!value) return null;
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const safe = endOfDay ? `${value}T23:59:59.999Z` : `${value}T00:00:00.000Z`;
+      const ts = Date.parse(safe);
+      return Number.isNaN(ts) ? null : ts;
+    }
+
+    const ts = Date.parse(value);
+    return Number.isNaN(ts) ? null : ts;
+  };
+
+  const extractDate = (row: T): number | null => {
+    const candidateKeys = ["recommendedAt", "createdAt", "lastSyncAt", "updatedAt", "date"];
+    for (const key of candidateKeys) {
+      const value = row[key];
+      if (typeof value !== "string" || !value.trim()) continue;
+      const ts = Date.parse(value);
+      if (!Number.isNaN(ts)) return ts;
+    }
+    return null;
+  };
+
+  const fromDateTs = parseDateFilter(fromDateRaw, false);
+  const toDateTs = parseDateFilter(toDateRaw, true);
+  if (fromDateTs !== null || toDateTs !== null) {
+    rows = rows.filter((row) => {
+      const rowDateTs = extractDate(row);
+      if (rowDateTs === null) return true;
+      if (fromDateTs !== null && rowDateTs < fromDateTs) return false;
+      if (toDateTs !== null && rowDateTs > toDateTs) return false;
+      return true;
+    });
+  }
+
   Object.entries(params).forEach(([key, value]) => {
-    if (["page", "pageSize", "q", "sortBy", "sortDirection"].includes(key) || value === undefined || value === "") {
+    if (["page", "pageSize", "q", "sortBy", "sortDirection", "fromDate", "toDate"].includes(key) || value === undefined || value === "") {
       return;
     }
-    rows = rows.filter((row) => String(row[key]).toLowerCase() === String(value).toLowerCase());
+    const expected = String(value).toLowerCase();
+    rows = rows.filter((row) => {
+      const current = String(row[key]).toLowerCase();
+      if (key === "collection") {
+        return current.split("|").map((x) => x.trim()).includes(expected);
+      }
+      return current === expected;
+    });
   });
 
   if (sortBy && rows.length > 0 && sortBy in rows[0]) {

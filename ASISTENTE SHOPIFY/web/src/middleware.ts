@@ -9,6 +9,7 @@ const protectedPaths = [
   "/overstock",
   "/stockouts",
   "/demand-planning",
+  "/demand-analytics",
   "/reorder-list",
   "/marketing-strategies",
   "/collections",
