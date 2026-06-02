@@ -13,6 +13,7 @@ const items = [
   ["Agotados", "/stockouts"],
   ["Planeacion de demanda", "/demand-planning"],
   ["Analitica de demanda", "/demand-analytics"],
+  ["Explorador total demanda", "/demand-analytics/explorer"],
   ["Recompras sugeridas", "/reorder-list"],
   ["Estrategias de mercadeo", "/marketing-strategies"],
   ["Colecciones", "/collections"],

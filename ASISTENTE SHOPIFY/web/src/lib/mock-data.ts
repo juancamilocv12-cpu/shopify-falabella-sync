@@ -295,7 +295,14 @@ export function paginateAndFilter<T extends Record<string, unknown>>(
     if (["page", "pageSize", "q", "sortBy", "sortDirection", "fromDate", "toDate"].includes(key) || value === undefined || value === "") {
       return;
     }
-    rows = rows.filter((row) => String(row[key]).toLowerCase() === String(value).toLowerCase());
+    const expected = String(value).toLowerCase();
+    rows = rows.filter((row) => {
+      const current = String(row[key]).toLowerCase();
+      if (key === "collection") {
+        return current.split("|").map((x) => x.trim()).includes(expected);
+      }
+      return current === expected;
+    });
   });
 
   if (sortBy && rows.length > 0 && sortBy in rows[0]) {

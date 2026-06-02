@@ -29,6 +29,7 @@ type ShopifyVariantRow = {
   vendor: string;
   tags: string[];
   collection: string;
+  collections: string[];
   createdAt: string;
   variantId: string;
   variantTitle: string;
@@ -95,7 +96,7 @@ async function fetchProducts(): Promise<ShopifyVariantRow[]> {
           vendor
           tags
           createdAt
-          collections(first: 20) {
+          collections(first: 250) {
             nodes {
               title
             }
@@ -148,7 +149,11 @@ async function fetchProducts(): Promise<ShopifyVariantRow[]> {
     }>(query, { first: 100, after });
 
     for (const product of data.products.nodes) {
-      const collection = product.collections.nodes[0]?.title ?? "Sin coleccion";
+      const collectionTitles = Array.from(
+        new Set(product.collections.nodes.map((node) => node.title).filter(Boolean)),
+      );
+      const normalizedCollections = collectionTitles.length > 0 ? collectionTitles : ["Sin coleccion"];
+      const collection = normalizedCollections.join(" | ");
       for (const variant of product.variants.nodes) {
         rows.push({
           productId: product.id,
@@ -157,6 +162,7 @@ async function fetchProducts(): Promise<ShopifyVariantRow[]> {
           vendor: product.vendor || "Sin vendor",
           tags: product.tags ?? [],
           collection,
+          collections: normalizedCollections,
           createdAt: product.createdAt,
           variantId: variant.id,
           variantTitle: variant.title,
@@ -402,30 +408,36 @@ export async function buildDashboardDataFromShopify() {
   });
 
   const collectionsMap = new Map<string, CollectionItem>();
-  for (const inv of inventoryData) {
-    const sale = salesData.find((s) => s.sku === inv.sku)!;
-    const current = collectionsMap.get(inv.collection) ?? {
-      id: `col-${inv.collection}`,
-      name: inv.collection,
-      products: 0,
-      stockTotal: 0,
-      sales30: 0,
-      sales90: 0,
-      inventoryValue: 0,
-      lowRotation: 0,
-      overstock: 0,
-      stockoutRisk: 0,
-      strategy: "Optimizar mix por demanda",
-    };
-    current.products += 1;
-    current.stockTotal += inv.availableStock;
-    current.sales30 += sale.sales30;
-    current.sales90 += sale.sales90;
-    current.inventoryValue += inv.availableStock * 50000;
-    if (inv.monthsOfInventory > 4) current.lowRotation += 1;
-    if (inv.inventoryStatus === "overstock") current.overstock += 1;
-    if (inv.inventoryStatus === "risk" || inv.inventoryStatus === "stockout") current.stockoutRisk += 1;
-    collectionsMap.set(inv.collection, current);
+  for (let idx = 0; idx < products.length; idx += 1) {
+    const row = products[idx];
+    const inv = inventoryData[idx];
+    const sale = salesData[idx];
+    const collectionNames = row.collections.length > 0 ? row.collections : ["Sin coleccion"];
+
+    for (const collectionName of collectionNames) {
+      const current = collectionsMap.get(collectionName) ?? {
+        id: `col-${collectionName}`,
+        name: collectionName,
+        products: 0,
+        stockTotal: 0,
+        sales30: 0,
+        sales90: 0,
+        inventoryValue: 0,
+        lowRotation: 0,
+        overstock: 0,
+        stockoutRisk: 0,
+        strategy: "Optimizar mix por demanda",
+      };
+      current.products += 1;
+      current.stockTotal += inv.availableStock;
+      current.sales30 += sale.sales30;
+      current.sales90 += sale.sales90;
+      current.inventoryValue += inv.availableStock * 50000;
+      if (inv.monthsOfInventory > 4) current.lowRotation += 1;
+      if (inv.inventoryStatus === "overstock") current.overstock += 1;
+      if (inv.inventoryStatus === "risk" || inv.inventoryStatus === "stockout") current.stockoutRisk += 1;
+      collectionsMap.set(collectionName, current);
+    }
   }
   const collectionsData = Array.from(collectionsMap.values());
 
