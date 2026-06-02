@@ -79,6 +79,13 @@ jobs:
           FALABELLA_SKIP_IMAGE_UPLOAD=false
           FALABELLA_FEED_POLL_ATTEMPTS=12
           FALABELLA_FEED_POLL_INTERVAL_MS=5000
+          FALABELLA_IMAGE_PREP_ENABLED=true
+          FALABELLA_RETRY_IMAGE_UPLOADS=true
+          FALABELLA_IMAGE_CANVAS_SIZE=1500
+          FALABELLA_IMAGE_MARGIN_PX=45
+          FALABELLA_IMAGE_JPEG_QUALITY=92
+          FALABELLA_IMAGE_READY_POLL_ATTEMPTS=40
+          FALABELLA_IMAGE_READY_POLL_INTERVAL_MS=3000
           EOF
 
       - name: Run one sync
@@ -86,11 +93,11 @@ jobs:
 
       - name: Commit SKU map changes
         run: |
-          if git diff --quiet -- data/sku-map.json; then
+          git add -A -- data/sku-map.json data/image-cache.json
+          if git diff --cached --quiet; then
             exit 0
           fi
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git add data/sku-map.json
-          git commit -m "chore: update Falabella sku map"
+          git commit -m "chore: update Falabella data (sku-map, image-cache)"
           git push

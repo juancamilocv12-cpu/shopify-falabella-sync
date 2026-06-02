@@ -121,6 +121,13 @@ export const config = {
     defaultImageUrl: process.env.FALABELLA_DEFAULT_IMAGE_URL || '',
     skipImageUpload: readBoolean('FALABELLA_SKIP_IMAGE_UPLOAD', false),
     feedPollAttempts: readNumber('FALABELLA_FEED_POLL_ATTEMPTS', 12),
-    feedPollIntervalMs: readNumber('FALABELLA_FEED_POLL_INTERVAL_MS', 5000)
+    feedPollIntervalMs: readNumber('FALABELLA_FEED_POLL_INTERVAL_MS', 5000),
+    imagePrepEnabled: readBoolean('FALABELLA_IMAGE_PREP_ENABLED', true),
+    imageRetryForExisting: readBoolean('FALABELLA_RETRY_IMAGE_UPLOADS', true),
+    imageCanvasSize: readNumber('FALABELLA_IMAGE_CANVAS_SIZE', 1500),
+    imageMarginPx: readNumber('FALABELLA_IMAGE_MARGIN_PX', 45),
+    imageJpegQuality: readNumber('FALABELLA_IMAGE_JPEG_QUALITY', 92),
+    imageReadyPollAttempts: readNumber('FALABELLA_IMAGE_READY_POLL_ATTEMPTS', 40),
+    imageReadyPollIntervalMs: readNumber('FALABELLA_IMAGE_READY_POLL_INTERVAL_MS', 3000)
   }
 };

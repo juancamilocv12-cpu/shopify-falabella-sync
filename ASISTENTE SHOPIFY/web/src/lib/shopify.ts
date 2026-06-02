@@ -82,8 +82,12 @@ async function shopifyGraphql<T>(query: string, variables?: Record<string, unkno
 
 async function fetchProducts(): Promise<ShopifyVariantRow[]> {
   const query = `
-    query Products($first: Int!) {
-      products(first: $first, sortKey: UPDATED_AT, reverse: true) {
+    query Products($first: Int!, $after: String) {
+      products(first: $first, after: $after, sortKey: UPDATED_AT, reverse: true) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
         nodes {
           id
           title
@@ -91,12 +95,12 @@ async function fetchProducts(): Promise<ShopifyVariantRow[]> {
           vendor
           tags
           createdAt
-          collections(first: 3) {
+          collections(first: 20) {
             nodes {
               title
             }
           }
-          variants(first: 20) {
+          variants(first: 100) {
             nodes {
               id
               title
@@ -110,48 +114,61 @@ async function fetchProducts(): Promise<ShopifyVariantRow[]> {
     }
   `;
 
-  const data = await shopifyGraphql<{
-    products: {
-      nodes: Array<{
-        id: string;
-        title: string;
-        productType: string;
-        vendor: string;
-        tags: string[];
-        createdAt: string;
-        collections: { nodes: Array<{ title: string }> };
-        variants: {
-          nodes: Array<{
-            id: string;
-            title: string;
-            sku: string;
-            price: string;
-            inventoryQuantity: number | null;
-          }>;
-        };
-      }>;
-    };
-  }>(query, { first: 120 });
-
   const rows: ShopifyVariantRow[] = [];
-  for (const product of data.products.nodes) {
-    const collection = product.collections.nodes[0]?.title ?? "Sin coleccion";
-    for (const variant of product.variants.nodes) {
-      rows.push({
-        productId: product.id,
-        productTitle: product.title,
-        productType: product.productType || "General",
-        vendor: product.vendor || "Sin vendor",
-        tags: product.tags ?? [],
-        collection,
-        createdAt: product.createdAt,
-        variantId: variant.id,
-        variantTitle: variant.title,
-        sku: variant.sku || `${product.id}-${variant.id}`,
-        price: Number(variant.price || 0),
-        inventoryQuantity: variant.inventoryQuantity ?? 0,
-      });
+
+  let hasNextPage = true;
+  let after: string | null = null;
+
+  while (hasNextPage) {
+    const data = await shopifyGraphql<{
+      products: {
+        pageInfo: {
+          hasNextPage: boolean;
+          endCursor: string | null;
+        };
+        nodes: Array<{
+          id: string;
+          title: string;
+          productType: string;
+          vendor: string;
+          tags: string[];
+          createdAt: string;
+          collections: { nodes: Array<{ title: string }> };
+          variants: {
+            nodes: Array<{
+              id: string;
+              title: string;
+              sku: string;
+              price: string;
+              inventoryQuantity: number | null;
+            }>;
+          };
+        }>;
+      };
+    }>(query, { first: 100, after });
+
+    for (const product of data.products.nodes) {
+      const collection = product.collections.nodes[0]?.title ?? "Sin coleccion";
+      for (const variant of product.variants.nodes) {
+        rows.push({
+          productId: product.id,
+          productTitle: product.title,
+          productType: product.productType || "General",
+          vendor: product.vendor || "Sin vendor",
+          tags: product.tags ?? [],
+          collection,
+          createdAt: product.createdAt,
+          variantId: variant.id,
+          variantTitle: variant.title,
+          sku: variant.sku || `${product.id}-${variant.id}`,
+          price: Number(variant.price || 0),
+          inventoryQuantity: variant.inventoryQuantity ?? 0,
+        });
+      }
     }
+
+    hasNextPage = data.products.pageInfo.hasNextPage;
+    after = data.products.pageInfo.endCursor;
   }
 
   return rows;
@@ -159,8 +176,12 @@ async function fetchProducts(): Promise<ShopifyVariantRow[]> {
 
 async function fetchOrderLines(): Promise<ShopifyOrderLine[]> {
   const query = `
-    query Orders($first: Int!, $query: String!) {
-      orders(first: $first, query: $query, sortKey: CREATED_AT, reverse: true) {
+    query Orders($first: Int!, $after: String, $query: String!) {
+      orders(first: $first, after: $after, query: $query, sortKey: CREATED_AT, reverse: true) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
         nodes {
           createdAt
           lineItems(first: 100) {
@@ -191,43 +212,57 @@ async function fetchOrderLines(): Promise<ShopifyOrderLine[]> {
   since.setDate(since.getDate() - 180);
   const queryFilter = `created_at:>=${since.toISOString().slice(0, 10)} status:any`;
 
-  const data = await shopifyGraphql<{
-    orders: {
-      nodes: Array<{
-        createdAt: string;
-        lineItems: {
-          nodes: Array<{
-            quantity: number;
-            sku: string | null;
-            title: string;
-            variantTitle: string | null;
-            variant: { id: string; sku: string | null; price: string | null } | null;
-            product: { id: string; vendor: string; productType: string; tags: string[] } | null;
-          }>;
-        };
-      }>;
-    };
-  }>(query, { first: 80, query: queryFilter });
-
   const lines: ShopifyOrderLine[] = [];
-  for (const order of data.orders.nodes) {
-    for (const line of order.lineItems.nodes) {
-      if (!line.product) continue;
-      const sku = line.sku || line.variant?.sku || `${line.product.id}-${line.title}`;
-      lines.push({
-        createdAt: order.createdAt,
-        quantity: line.quantity,
-        sku,
-        title: line.title,
-        variantTitle: line.variantTitle || "Default",
-        productId: line.product.id,
-        vendor: line.product.vendor || "Sin vendor",
-        productType: line.product.productType || "General",
-        tags: line.product.tags ?? [],
-        price: Number(line.variant?.price || 0),
-      });
+
+  let hasNextPage = true;
+  let after: string | null = null;
+
+  while (hasNextPage) {
+    const data = await shopifyGraphql<{
+      orders: {
+        pageInfo: {
+          hasNextPage: boolean;
+          endCursor: string | null;
+        };
+        nodes: Array<{
+          createdAt: string;
+          lineItems: {
+            nodes: Array<{
+              quantity: number;
+              sku: string | null;
+              title: string;
+              variantTitle: string | null;
+              variant: { id: string; sku: string | null; price: string | null } | null;
+              product: { id: string; vendor: string; productType: string; tags: string[] } | null;
+            }>;
+          };
+        }>;
+      };
+    }>(query, { first: 100, after, query: queryFilter });
+
+    for (const order of data.orders.nodes) {
+      for (const line of order.lineItems.nodes) {
+        if (!line.product) continue;
+        const sku = line.sku || line.variant?.sku || `${line.product.id}-${line.title}`;
+        lines.push({
+          createdAt: order.createdAt,
+          quantity: line.quantity,
+          sku,
+          title: line.title,
+          variantTitle: line.variantTitle || "Default",
+          productId: line.product.id,
+          vendor: line.product.vendor || "Sin vendor",
+          productType: line.product.productType || "General",
+          tags: line.product.tags ?? [],
+          price: Number(line.variant?.price || 0),
+        });
+      }
     }
+
+    hasNextPage = data.orders.pageInfo.hasNextPage;
+    after = data.orders.pageInfo.endCursor;
   }
+
   return lines;
 }
 
@@ -362,6 +397,7 @@ export async function buildDashboardDataFromShopify() {
         roundedQty > 0
           ? `Demanda y cobertura real Shopify sugieren comprar ${roundedQty} unidades.`
           : "Cobertura suficiente o exceso de inventario.",
+      recommendedAt: inv.lastSyncAt,
     };
   });
 

@@ -47,3 +47,32 @@ export function VendorFilter({
     />
   );
 }
+
+export function DateRangeFilter({
+  fromDate,
+  toDate,
+  onFromDateChange,
+  onToDateChange,
+}: {
+  fromDate: string;
+  toDate: string;
+  onFromDateChange: (v: string) => void;
+  onToDateChange: (v: string) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      <Input
+        type="date"
+        value={fromDate}
+        onChange={(e) => onFromDateChange(e.target.value)}
+        aria-label="Fecha inicial"
+      />
+      <Input
+        type="date"
+        value={toDate}
+        onChange={(e) => onToDateChange(e.target.value)}
+        aria-label="Fecha final"
+      />
+    </div>
+  );
+}

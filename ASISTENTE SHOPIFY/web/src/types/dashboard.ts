@@ -77,6 +77,7 @@ export interface DemandPlanningItem {
   priority: Priority;
   status: "pending" | "accepted" | "rejected" | "executed";
   reason: string;
+  recommendedAt: string;
 }
 
 export interface StrategyItem {
@@ -175,5 +176,7 @@ export interface QueryParams {
   q?: string;
   sortBy?: string;
   sortDirection?: "asc" | "desc";
+  fromDate?: string;
+  toDate?: string;
   [key: string]: string | number | undefined;
 }

@@ -166,6 +166,71 @@ export function getDemandPlanning(params: QueryParams) {
   return paginateAndFilter(state.demandPlanningData, params);
 }
 
+export function getDemandAnalytics(params: QueryParams) {
+  syncStateFromDisk();
+
+  const baseRows = state.demandPlanningData.map((demand) => {
+    const inv = state.inventoryData.find((item) => item.sku === demand.sku);
+    return {
+      id: demand.id,
+      product: demand.product,
+      sku: demand.sku,
+      vendor: demand.vendor,
+      collection: demand.collection,
+      monthlyDemand: demand.monthlyDemand,
+      daysOfInventory: inv?.daysOfInventory ?? 0,
+      recommendedAt: demand.recommendedAt ?? inv?.lastSyncAt ?? new Date().toISOString(),
+    };
+  });
+
+  const filteredRows = paginateAndFilter(baseRows, {
+    ...params,
+    page: 1,
+    pageSize: Math.max(1, baseRows.length),
+  }).data;
+
+  const topDemand = [...filteredRows]
+    .sort((a, b) => b.monthlyDemand - a.monthlyDemand)
+    .slice(0, 12)
+    .map((row) => ({
+      product: row.product.length > 24 ? `${row.product.slice(0, 24)}...` : row.product,
+      monthlyDemand: row.monthlyDemand,
+    }));
+
+  const demandVsInventoryDays = [...filteredRows]
+    .sort((a, b) => b.monthlyDemand - a.monthlyDemand)
+    .slice(0, 20)
+    .map((row) => ({
+      product: row.product.length > 20 ? `${row.product.slice(0, 20)}...` : row.product,
+      monthlyDemand: row.monthlyDemand,
+      daysOfInventory: Number(row.daysOfInventory.toFixed(1)),
+    }));
+
+  const inventoryCoverageBuckets = [
+    { bucket: "0-15 dias", count: filteredRows.filter((x) => x.daysOfInventory <= 15).length },
+    { bucket: "16-30 dias", count: filteredRows.filter((x) => x.daysOfInventory > 15 && x.daysOfInventory <= 30).length },
+    { bucket: "31-60 dias", count: filteredRows.filter((x) => x.daysOfInventory > 30 && x.daysOfInventory <= 60).length },
+    { bucket: "61+ dias", count: filteredRows.filter((x) => x.daysOfInventory > 60).length },
+  ];
+
+  const totalMonthlyDemand = filteredRows.reduce((acc, row) => acc + row.monthlyDemand, 0);
+  const averageInventoryDays =
+    filteredRows.length > 0
+      ? Number((filteredRows.reduce((acc, row) => acc + row.daysOfInventory, 0) / filteredRows.length).toFixed(1))
+      : 0;
+
+  return {
+    summary: {
+      products: filteredRows.length,
+      totalMonthlyDemand,
+      averageInventoryDays,
+    },
+    topDemand,
+    demandVsInventoryDays,
+    inventoryCoverageBuckets,
+  };
+}
+
 export function getReorderList(params: QueryParams) {
   syncStateFromDisk();
   return paginateAndFilter(state.demandPlanningData.filter((x) => x.roundedQty > 0), params);

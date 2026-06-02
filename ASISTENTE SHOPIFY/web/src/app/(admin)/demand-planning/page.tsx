@@ -43,6 +43,10 @@ export default function DemandPlanningPage() {
     { header: "Redondeado", accessorKey: "roundedQty" },
     { header: "Riesgo", cell: ({ row }) => <RiskBadge value={row.original.stockoutRisk} /> },
     { header: "Tendencia", cell: ({ row }) => <TrendBadge value={row.original.trend} /> },
+    {
+      header: "Fecha recomendacion",
+      cell: ({ row }) => new Date(row.original.recommendedAt).toLocaleDateString("es-CO"),
+    },
     { header: "Recomendacion", accessorKey: "recommendation" },
     { header: "Prioridad", cell: ({ row }) => <PriorityBadge value={row.original.priority} /> },
     { header: "Acciones", cell: ({ row }) => <ActionsCell item={row.original} onExplain={setSelected} /> },
@@ -56,6 +60,7 @@ export default function DemandPlanningPage() {
         endpoint="/api/demand-planning"
         columns={columns}
         emptyMessage="No hay recomendaciones de planeacion de demanda disponibles."
+        enableDateFilters
       />
       <RecommendationDrawer
         open={Boolean(selected)}
